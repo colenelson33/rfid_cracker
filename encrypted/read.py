@@ -7,6 +7,7 @@ import logging
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+logging.getLogger('mfrc522').setLevel(logging.WARNING)
 def read_with_key(sector, key):
     """Try to read block 4*sector with this 6-byte key. Return the string on success, else None."""
     rdr = MFRC522()
@@ -22,7 +23,7 @@ def read_with_key(sector, key):
         if status != rdr.MI_OK:
             return None
         rdr.MFRC522_SelectTag(uid)
-        logger.info("✔ UID: %s", uid)
+        #logger.info("✔ UID: %s", uid)
 
         # auth with this key
         status = rdr.MFRC522_Auth(rdr.PICC_AUTHENT1A, data_blk, key, uid)
@@ -37,7 +38,7 @@ def read_with_key(sector, key):
             return None
         secret = bytes(data).rstrip(b'\x00').decode('utf-8', errors='ignore')
         rdr.MFRC522_StopCrypto1()
-        logger.info
+        #logger.info(secret)
         return secret
 
     except Exception as e:
@@ -75,5 +76,8 @@ if __name__ == "__main__":
     keys = load_keys("./../keys.txt")
     for key in keys:
         result = read_with_key(sector=2, key=key)
-        if result != -1:
+        if result is not None:
             print(result)
+            break
+    else:
+        print("None of the keys succeeded")

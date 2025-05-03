@@ -7,10 +7,10 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def write_with_new_key(sector=2, secret=b"Encrypted123456"):
+def write_with_new_key(sector, secret):
     rdr = MFRC522()
-    default_key = [0xFF] * 6
-    new_key = [0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5]
+    default_key = [0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5]
+    new_key = [0xC9, 0x6B, 0xD1, 0xCE, 0x60, 0x7F]
     key_b = [0x00] * 6  # Unused key B
     # Access bits: FF078069 allows read/write with key A
     access_bits = [0xFF, 0x07, 0x80, 0x69]
@@ -95,4 +95,4 @@ def write_with_new_key(sector=2, secret=b"Encrypted123456"):
         GPIO.cleanup()
 
 if __name__ == "__main__":
-    write_with_new_key(sector=2, secret=b"Encrypted123456")
+    write_with_new_key(sector=2, secret=b"This is my secret")
