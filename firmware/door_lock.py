@@ -16,7 +16,9 @@ DB_PATH      = './../database/rfid.db'
 config = json.load(open('./../config/keys.json'))
 whitelist = json.load(open('./../config/whitelist.json'))
 
-# ─── Database Helpers ──────────────────────────────────────────────────────────
+# Database helpers
+
+# this table will log every attempt
 def init_db(conn):
     c = conn.cursor()
     c.execute("""
@@ -26,66 +28,22 @@ def init_db(conn):
       timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
       success   INTEGER NOT NULL
     )""")
-    c.execute("""
-    CREATE TABLE IF NOT EXISTS watchlist (
-      uid       TEXT PRIMARY KEY,
-      failures  INTEGER NOT NULL DEFAULT 0,
-      flagged   INTEGER NOT NULL DEFAULT 0,
-      last_fail DATETIME
-    )""")
     conn.commit()
 
+# SQL for logging an attempt
 def log_attempt(conn, uid, success):
     """Insert every authentication attempt."""
     conn.execute(
         "INSERT INTO attempts(uid, success) VALUES(?, ?)",
         (uid, int(success))
     )
-    conn.commit()
-
-def update_watchlist(conn, uid, success):
-    """
-    Increment failure counts on bad auth, flag after 3, trigger alarm.
-    Reset failures to 0 on a successful auth.
-    """
-    c = conn.cursor()
-    c.execute("SELECT failures, flagged FROM watchlist WHERE uid=?", (uid,))
-    row = c.fetchone()
-
-    if not row:
-        failures, flagged = 0, 0
-        c.execute("INSERT INTO watchlist(uid) VALUES(?)", (uid,))
-    else:
-        failures, flagged = row
-
-    if success:
-        # optionally clear past failures
-        failures = 0
-        c.execute(
-            "UPDATE watchlist SET failures=?, flagged=0 WHERE uid=?",
-            (failures, uid)
-        )
-    else:
-        failures += 1
-        c.execute(
-            "UPDATE watchlist SET failures=?, last_fail=CURRENT_TIMESTAMP WHERE uid=?",
-            (failures, uid)
-        )
-        if failures >= 3 and not flagged:
-            # first time hitting 3 failures
-            c.execute(
-                "UPDATE watchlist SET flagged=1 WHERE uid=?",
-                (uid,)
-            )
-            trigger_alarm()
 
     conn.commit()
     
 
-
-# Initialize hardware
+# Initialize hardware from helpers
 reader = RFIDReader()
-display = LCD()          # wraps RPLCD.i2c CharLCD
+display = LCD()
 
 def get_current_key(uid_str):
     idx = whitelist.get(uid_str, 0)
@@ -95,13 +53,13 @@ def get_current_key(uid_str):
 # Rotate to a random Key A for the given UID in-place in whitelist.json
 
 def rotate_key_on_card(uid_str):
-    #next_idx = random.randrange(len(config))
+    next_idx = random.randrange(len(config))
     if isinstance(uid_str, bytes):
-        uid_str = uid_str.hex().upper()  # Convert to hex string, e.g., '23B26C31CC'
-    next_idx = 0
+        uid_str = uid_str.hex().upper()  # Convert to hex string
     new_hex = config[next_idx]
     new_key = bytes.fromhex(new_hex)
     state = whitelist.get(uid_str, 0)
+    
     # Write new Key A and Key B into sector 1 trailer
     write_trailer_block(sector=1, keyA=new_key, keyB=new_key, access_bits=None, state=state)
     # Update the mapping and persist
@@ -127,22 +85,24 @@ if __name__ == '__main__':
         keyA = get_current_key(uid_str)
         auth_ok = reader.authenticate(sector=1, key=keyA, uid=uid)
 
-        # Log every attempt & update watchlist
-        log_attempt(conn, uid_str, auth_ok)
-        update_watchlist(conn, uid_str, auth_ok)
-
+        # Log every attempt
         if not auth_ok:
+            log_attempt(conn, uid_str, auth_ok)
             display.cursor(1, 0)
             display.write("Auth Failed")
         else:
             if uid_str in whitelist:
+                log_attempt(conn, uid_str, auth_ok)
                 display.clear()
                 display.write("Unlocked")
                 rotate_key_on_card(uid_str)
             else:
+                log_attempt(conn, uid_str, 0)
+                # This will have passed authentification, but not be in our whitelist of uids
                 display.clear()
                 display.write("Intrusion!")
 
-        time.sleep(2)   # pause so the user can read
+        # Pause so we can read screen for a bit before going back to scanning
+        time.sleep(2)
         display.clear()
         display.write("Waiting for card")
