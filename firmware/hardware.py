@@ -9,16 +9,16 @@ from RPLCD.i2c import CharLCD
 GPIO.setmode(GPIO.BOARD)
 GPIO.setwarnings(False)
 
-
+# Create RFIDReader object
 class RFIDReader:
     def __init__(self, bus=0, device=0):
-        # Initialize SPI for RC522
+        # init spi
         self.spi = spidev.SpiDev()
         self.spi.open(bus, device)
         self.reader = MFRC522()
 
     def wait_for_tag(self):
-        # Blocks until a tag is detected, returns UID bytes
+        # waits for a tag to be detected
         while True:
             status, _ = self.reader.MFRC522_Request(self.reader.PICC_REQIDL)
             if status == self.reader.MI_OK:
@@ -28,7 +28,7 @@ class RFIDReader:
             time.sleep(0.1)
 
     def authenticate(self, sector, key, uid):
-        # Authenticate using Key A against trailer block, ensure tag is selected first
+        # Once tag is selected, auth against sector 1 trailer with key A
         block = sector * 4 + 3
         uid_list = list(uid) if not isinstance(uid, list) else uid
         # Select the tag so the auth goes to the right UID
@@ -46,7 +46,7 @@ class RFIDReader:
 
 class LCD:
     def __init__(self, address=0x27, port=1):
-        # Initialize I2C 16x2 LCD
+        # Init the I2C 16x2 LCD
         self.lcd = CharLCD(
             i2c_expander='PCF8574',
             address=0x27,

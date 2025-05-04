@@ -5,15 +5,12 @@ import random
 from mfrc522 import MFRC522
 from hardware import LCD, RFIDReader
 from writer import write_trailer_block
-import RPi.GPIO as GPIO
 
 # database imports
 import sqlite3
 
 # database setup and alarm system
 DB_PATH      = './../database/rfid.db'
-ALARM_PIN    = 11      # GPIO pin for buzzer/relay
-ALARM_LENGTH = 5       # seconds
 
 # Load configuration and state
 config = json.load(open('./../config/keys.json'))
@@ -84,11 +81,6 @@ def update_watchlist(conn, uid, success):
 
     conn.commit()
     
-def trigger_alarm():
-    GPIO.setup(ALARM_PIN, GPIO.OUT, initial=GPIO.LOW)
-    GPIO.output(ALARM_PIN, GPIO.HIGH)
-    time.sleep(ALARM_LENGTH)
-    GPIO.output(ALARM_PIN, GPIO.LOW)
 
 
 # Initialize hardware
@@ -118,13 +110,9 @@ def rotate_key_on_card(uid_str):
         json.dump(whitelist, f, indent=2)
 
 if __name__ == '__main__':
-    # GPIO setup for alarm
-    GPIO.setup(ALARM_PIN, GPIO.OUT, initial=GPIO.LOW)
-
     # DB init
     conn = sqlite3.connect(DB_PATH, detect_types=sqlite3.PARSE_DECLTYPES)
     init_db(conn)
-    
     
     display.clear()
     display.write("Waiting for card")
