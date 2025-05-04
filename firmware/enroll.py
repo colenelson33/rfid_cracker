@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import time
 from hardware import RFIDReader, LCD
 from writer import write_trailer_block
 
@@ -16,6 +17,8 @@ def enroll_new_card():
     if uid_str in whitelist:
         lcd.clear()
         lcd.write("Already enrolled")
+        time.sleep(2)
+        lcd.clear()
         return
     
     state = whitelist.get(uid_str, 0)
