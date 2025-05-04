@@ -4,7 +4,7 @@ from mfrc522 import MFRC522
 import time
 
 # your “new” 6-byte key that you used before
-NEW_KEY     = [0xC9, 0x6B, 0xD1, 0xCE, 0x60, 0x7F]
+NEW_KEY     = [0x00]*6
 # factory default key
 DEFAULT_KEY = [0xFF]*6
 ACCESS_BITS = [0xFF, 0x07, 0x80, 0x69]  # standard access bits

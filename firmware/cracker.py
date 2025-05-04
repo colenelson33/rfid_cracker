@@ -39,12 +39,13 @@ def read_with_key(sector, key):
             logger.info("  key %s failed auth", [hex(b) for b in key])
             return None
 
-        data = rdr.MFRC522_Read(data_blk)
-        if not data:
-            return None
-        secret = bytes(data).rstrip(b'\x00').decode('utf-8', errors='ignore')
-        rdr.MFRC522_StopCrypto1()
-        return secret
+        # data = rdr.MFRC522_Read(data_blk)
+        # if not data:
+        #     return None
+        # secret = bytes(data).rstrip(b'\x00').decode('utf-8', errors='ignore')
+        # rdr.MFRC522_StopCrypto1()
+        # return secret
+        return key
 
     except Exception:
         return None
@@ -66,19 +67,21 @@ def load_keys(path):
 if __name__ == "__main__":
     lcd.clear()
     lcd.write_string("Cracking...")
-    keys = load_keys("./../keys.txt")
+    keys = load_keys("./../config/keys.txt")
 
     for idx, key in enumerate(keys, 1):
         lcd.cursor_pos = (1, 0)
         lcd.write_string(f"{idx}/{len(keys)}")
-        result = read_with_key(sector=2, key=key)
+        result = read_with_key(sector=1, key=key)
         if result:
+            # Convert key to hex string (e.g., "FFFFFFFFFFFF")
+            key_hex = ''.join([f'{b:02X}' for b in result])
             lcd.clear()
             lcd.write_string("Found:")
             lcd.cursor_pos = (1, 0)
-            # If longer than 16 chars, you might scroll or truncate
-            lcd.write_string(result[:16])
-            print("Secret:", result)
+            # Display first 16 chars of hex key (fits 16-col LCD)
+            lcd.write_string(key_hex[:16])
+            print("Key:", key_hex)
             break
     else:
         lcd.clear()
